@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>探究イラスト生成テスト</title>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 20px;
+    }
+
+    main {
+      max-width: 650px;
+      margin: 30px auto;
+      padding: 24px;
+      background: white;
+      border-radius: 12px;
+    }
+
+    h1 {
+      font-size: 22px;
+    }
+
+    label {
+      display: block;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+
+    input, textarea, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      font-size: 16px;
+    }
+
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+    }
+
+    button {
+      background: #1769aa;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #999;
+      cursor: wait;
+    }
+
+    #image {
+      display: block;
+      max-width: 100%;
+      margin-top: 20px;
+      border-radius: 8px;
+    }
+
+    #image[hidden] {
+      display: none;
+    }
+
+    #status {
+      white-space: pre-wrap;
+      margin-top: 18px;
+    }
+  </style>
+</head>
+
+<body>
+<main>
+  <h1>探究イラスト生成テスト</h1>
+
+  <p>
+    探究活動のアイデアを文章で入力すると、
+    AIがイラストを生成します。
+  </p>
+
+  <label for="code">テスト用認証番号</label>
+  <input
+    id="code"
+    type="password"
+    autocomplete="off"
+  >
+
+  <label for="description">探究内容</label>
+  <textarea
+    id="description"
+    maxlength="2000"
+    placeholder="例：月面で低重力を利用した新しいハードル走を考えています。選手は大きくジャンプして障害物を越えます。"
+  ></textarea>
+
+  <button id="generate" type="button">
+    イラストを生成する
+  </button>
+
+  <p id="status">まだ実行していません。</p>
+
+  <img id="image" alt="AIが生成したイラスト" hidden>
+
+  <button id="download" type="button" hidden>
+    イラストを保存
+  </button>
+</main>
+
+<script>
+const API_URL =
+  "https://pti-image-test.oitajoho.workers.dev/generate";
+
+const generateButton =
+  document.getElementById("generate");
+
+const downloadButton =
+  document.getElementById("download");
+
+const status =
+  document.getElementBy
