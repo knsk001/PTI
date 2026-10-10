@@ -74,7 +74,24 @@
   <button id="send" type="button">AIで読み取る</button>
 
   <h2>読み取り結果</h2>
-  <pre id="result">まだ実行していません。</pre>
+<pre id="result">まだ実行していません。</pre>
+
+<h2>イラスト生成</h2>
+
+<button id="generateImage" type="button" disabled>
+  読み取り結果からイラストを生成
+</button>
+
+<p id="imageStatus">
+  資料の読み取り後に生成できます。
+</p>
+
+<img
+  id="generatedImage"
+  alt="探究資料から生成したイラスト"
+  style="display:none; max-width:100%;"
+>
+
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -84,6 +101,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 const API_URL =
   "https://pdf-vision-test.oitajoho.workers.dev/test";
+  const IMAGE_API_URL =
+  "https://pti-image-test.oitajoho.workers.dev/generate";
 
 // PDFの指定ページをJPEG画像に変換する
 async function pdfToImage(file, pageNumber = 1) {
@@ -134,8 +153,26 @@ const photo = document.getElementById("photo");
 const preview = document.getElementById("preview");
 const send = document.getElementById("send");
 const result = document.getElementById("result");
+const generateImage =
+  document.getElementById("generateImage");
 
+const imageStatus =
+  document.getElementById("imageStatus");
+
+const generatedImage =
+  document.getElementById("generatedImage");
+
+let researchDescription = "";
 photo.addEventListener("change", () => {
+  // 前の資料の読み取り結果をリセット
+researchDescription = "";
+generateImage.disabled = true;
+
+result.textContent = "まだ実行していません。";
+imageStatus.textContent = "資料の読み取り後に生成できます。";
+
+generatedImage.style.display = "none";
+generatedImage.removeAttribute("src");
   const file = photo.files[0];
 
   preview.hidden = true;
@@ -146,7 +183,7 @@ photo.addEventListener("change", () => {
   if (file.type === "application/pdf") {
     result.textContent =
       "PDFを選択しました：" + file.name +
-      "\nPDFの読み取り処理は、これから追加します。";
+      "\n「AIで読み取る」を押してください。";
     return;
   }
 
@@ -232,9 +269,20 @@ result.textContent = "AIが画像を読み取っています...";
       data?.choices?.[0]?.message?.content;
 
     result.textContent =
-      typeof content === "string"
-        ? content
-        : JSON.stringify(data, null, 2);
+  typeof content === "string"
+    ? content
+    : JSON.stringify(data, null, 2);
+
+// 読み取り結果を画像生成用に保存
+researchDescription =
+  typeof content === "string" ? content.trim() : "";
+
+// 読み取りに成功した場合だけ画像生成を許可
+generateImage.disabled = !researchDescription;
+
+imageStatus.textContent = researchDescription
+  ? "読み取り結果を確認してから、イラストを生成してください。"
+  : "探究内容を取得できませんでした。";
 
   } catch (error) {
     result.textContent =
@@ -244,6 +292,57 @@ result.textContent = "AIが画像を読み取っています...";
   } finally {
     send.disabled = false;
   }
+});
+  generateImage.addEventListener("click", async () => {
+
+  if (!researchDescription) {
+    imageStatus.textContent = "先に資料を読み取ってください。";
+    return;
+  }
+
+  const imageCode = prompt("画像生成用の確認コードを入力してください。");
+
+  if (!imageCode) return;
+
+  generateImage.disabled = true;
+  imageStatus.textContent = "イラストを生成しています...";
+  generatedImage.style.display = "none";
+
+  try {
+    const response = await fetch(IMAGE_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Test-Code": imageCode
+      },
+      body: JSON.stringify({
+        description: researchDescription
+      })
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(`画像生成エラー (${response.status}): ${message}`);
+    }
+
+    const blob = await response.blob();
+
+    if (!blob.type.startsWith("image/")) {
+      throw new Error("画像データを取得できませんでした。");
+    }
+
+    generatedImage.src = URL.createObjectURL(blob);
+    generatedImage.style.display = "block";
+
+    imageStatus.textContent = "イラストを生成しました。";
+
+  } catch (error) {
+    imageStatus.textContent = "エラー：" + error.message;
+
+  } finally {
+    generateImage.disabled = false;
+  }
+
 });
 </script>
 </body>
