@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>手書き資料 AI読み取りテスト</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 20px;
+    }
+    main {
+      max-width: 650px;
+      margin: 30px auto;
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+    }
+    h1 { font-size: 22px; }
+    label {
+      display: block;
+      margin-top: 18px;
+      font-weight: bold;
+    }
+    input, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      font-size: 16px;
+    }
+    button {
+      background: #1769aa;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #999;
+      cursor: wait;
+    }
+    img {
+      max-width: 100%;
+      max-height: 350px;
+      margin-top: 15px;
+    }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #f0f3f7;
+      padding: 15px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>手書き資料 AI読み取りテスト</h1>
+  <p>写真を1枚選択し、AIが内容を読み取れるか確認します。</p>
+
+  <label for="code">テスト用認証番号</label>
+  <input id="code" type="password" autocomplete="off">
+
+  <label for="photo">写真を選択・撮影</label>
+  <input id="photo" type="file"
+         accept="image/png,image/jpeg"
+         capture="environment">
+
+  <img id="preview" alt="選択した画像" hidden>
+
+  <button id="send" type="button">AIで読み取る</button>
+
+  <h2>読み取り結果</h2>
+  <pre id="result">まだ実行していません。</pre>
+</main>
+
+<script>
+const API_URL =
+  "https://pdf-vision-test.oitajoho.workers.dev/test";
+
+const photo = document.getElementById("photo");
+const preview = document.getElementById("preview");
+const send = document.getElementById("send");
+const result = document.getElementById("result");
+
+photo.addEventListener("change", () => {
+  const file = photo.files[0];
+
+  preview.hidden = true;
+  preview.removeAttribute("src");
+
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+  preview.onload = () => URL.revokeObjectURL(url);
+  preview.src = url;
+  preview.hidden = false;
+});
+
+send.addEventListener("click", async () => {
+  const code = document.getElementById("code").value;
+  const file = photo.files[0];
+
+  if (!code) {
+    result.textContent = "認証番号を入力してください。";
+    return;
+  }
+
+  if (!file) {
+    result.textContent = "写真を選択してください。";
+    return;
+  }
+
+  if (!["image/png", "image/jpeg"].includes(file.type)) {
+    result.textContent = "PNGまたはJPEGを選択してください。";
+    return;
+  }
+
+  if (file.size === 0 || file.size > 5 * 1024 * 1024) {
+    result.textContent = "5MB以下の画像を選択してください。";
+    return;
+  }
+
+  send.disabled = true;
+  result.textContent = "AIが画像を読み取っています...";
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "X-Test-Code": code,
+        "Content-Type": file.type
+      },
+      body: file
+    });
+
+    const text = await response.text();
+
+    if (!response.ok) {
+      result.textContent =
+        "HTTP " + response.status + "\n" + text;
+      return;
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      result.textContent = text;
+      return;
+    }
+
+    const content =
+      data?.response ??
+      data?.choices?.[0]?.message?.content;
+
+    result.textContent =
+      typeof content === "string"
+        ? content
+        : JSON.stringify(data, null, 2);
+
+  } catch (error) {
+    result.textContent =
+      "通信に失敗しました。\n" +
+      "Cloudflare WorkerのCORS設定などを確認してください。\n" +
+      error.message;
+  } finally {
+    send.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
