@@ -122,4 +122,95 @@ const downloadButton =
   document.getElementById("download");
 
 const status =
-  document.getElementBy
+  document.getElementById("status");
+
+const image =
+  document.getElementById("image");
+
+let currentImageUrl = null;
+
+generateButton.addEventListener("click", async () => {
+  const code =
+    document.getElementById("code").value;
+
+  const description =
+    document.getElementById("description").value.trim();
+
+  if (!code) {
+    status.textContent = "認証番号を入力してください。";
+    return;
+  }
+
+  if (!description) {
+    status.textContent = "探究内容を入力してください。";
+    return;
+  }
+
+  generateButton.disabled = true;
+  downloadButton.hidden = true;
+  image.hidden = true;
+
+  if (currentImageUrl) {
+    URL.revokeObjectURL(currentImageUrl);
+    currentImageUrl = null;
+  }
+
+  status.textContent =
+    "AIがイラストを生成しています。しばらくお待ちください...";
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "X-Test-Code": code,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        description: description
+      })
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      status.textContent =
+        "HTTP " + response.status + "\n" + message;
+      return;
+    }
+
+    const blob = await response.blob();
+
+    if (!blob.type.startsWith("image/")) {
+      status.textContent =
+        "画像以外のデータが返されました。";
+      return;
+    }
+
+    currentImageUrl = URL.createObjectURL(blob);
+
+    image.src = currentImageUrl;
+    image.hidden = false;
+    downloadButton.hidden = false;
+
+    status.textContent =
+      "イラストの生成が完了しました。";
+
+  } catch (error) {
+    status.textContent =
+      "通信に失敗しました。\n" + error.message;
+
+  } finally {
+    generateButton.disabled = false;
+  }
+});
+
+downloadButton.addEventListener("click", () => {
+  if (!currentImageUrl) return;
+
+  const link = document.createElement("a");
+  link.href = currentImageUrl;
+  link.download = "tankyu-illustration.png";
+  link.click();
+});
+</script>
+</body>
+</html>
