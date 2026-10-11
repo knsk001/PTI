@@ -117,7 +117,15 @@ button:disabled { background: #a4b0bc; cursor: not-allowed; }
       <option value="none">追加条件なし（基本設定）</option>
       <option value="space">宇宙の条件を追加する</option>
     </select>
-
+<div id="spaceDetails" style="display:none;">
+  <label for="spaceNote">宇宙環境の補足条件（自由入力）</label>
+  <input
+    id="spaceNote"
+    type="text"
+    maxlength="200"
+    placeholder="例：月面、低重力、地球が見える"
+  >
+</div>
     <p class="note">
       宇宙を選ぶと、資料の内容に宇宙環境の条件を追加します。
     </p>
@@ -143,7 +151,17 @@ button:disabled { background: #a4b0bc; cursor: not-allowed; }
 
 <script>
 const API = "https://pdf-illustration.oitajoho.workers.dev";
+// 宇宙の条件を選択したときだけ自由入力欄を表示
+document.getElementById("environment")
+  .addEventListener("change", () => {
 
+    const environment =
+      document.getElementById("environment").value;
+
+    document.getElementById("spaceDetails").style.display =
+      environment === "space" ? "block" : "none";
+
+  });
 document.getElementById("authBtn").addEventListener("click", async () => {
   const studentId = document.getElementById("studentId").value.trim();
   const code = document.getElementById("authCode").value.trim();
@@ -307,7 +325,8 @@ document.getElementById("generateBtn")
     const code = document.getElementById("authCode").value.trim();
     const style = document.getElementById("style").value;
     const environment = document.getElementById("environment").value;
-
+　　const spaceNote = document.getElementById("spaceNote").value.trim();
+    
 if (!file) {
   status.textContent = "資料を選択してください。";
   return;
@@ -344,6 +363,7 @@ if (fileType === "pdf") {
       formData.append("studentId", studentId);
       formData.append("style", style);
       formData.append("environment", environment);
+      formData.append("spaceNote", environment === "space" ? spaceNote : "");
       const imageName =
   image.type === "image/png"
     ? "research.png"
