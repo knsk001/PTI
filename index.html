@@ -81,11 +81,22 @@ button:disabled { background: #a4b0bc; cursor: not-allowed; }
 
 <div id="studentArea">
   <section>
-    <h2>② PDFをアップロード</h2>
-    <input id="pdfFile" type="file"
-           accept=".pdf,application/pdf">
-    <p class="note">2～3ページのPDFを選択してください。</p>
-  </section>
+  <h2>② 資料をアップロード</h2>
+
+  <label for="fileType">アップロード方法</label>
+  <select id="fileType">
+    <option value="pdf">PDFを選択</option>
+    <option value="photo">写真を選択</option>
+  </select>
+
+  <label for="pdfFile">資料を選択</label>
+  <input id="pdfFile" type="file"
+         accept=".pdf,application/pdf">
+
+  <p id="fileNote" class="note">
+    PDFの1ページ目を読み取ります。
+  </p>
+</section>
 
   <section>
     <h2>③ 画像のタッチ</h2>
@@ -105,7 +116,7 @@ button:disabled { background: #a4b0bc; cursor: not-allowed; }
     イラストを生成する
   </button>
   <p id="generateStatus" class="note">
-    PDFを選択すると生成できます。
+    PDFまたは写真を選択すると生成できます。
   </p>
 </section>
 
@@ -115,6 +126,8 @@ button:disabled { background: #a4b0bc; cursor: not-allowed; }
   </section>
 </div>
 </main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
 <script>
 const API = "https://pdf-illustration.oitajoho.workers.dev";
@@ -161,7 +174,44 @@ document.getElementById("authBtn").addEventListener("click", async () => {
     button.disabled = false;
   }
 });
-  // PDF選択時に生成ボタンを有効にする
+  // PDFと写真の選択を切り替える
+document.getElementById("fileType")
+  .addEventListener("change", () => {
+
+    const fileType =
+      document.getElementById("fileType").value;
+
+    const fileInput =
+      document.getElementById("pdfFile");
+
+    const fileNote =
+      document.getElementById("fileNote");
+
+    // 切り替えたら選択済みファイルを解除
+    fileInput.value = "";
+
+    document.getElementById("generateBtn").disabled = true;
+
+    if (fileType === "photo") {
+
+      fileInput.accept = "image/jpeg,image/png";
+
+      fileNote.textContent =
+        "JPEGまたはPNG形式の写真を選択してください。";
+
+    } else {
+
+      fileInput.accept = ".pdf,application/pdf";
+
+      fileNote.textContent =
+        "PDFの1ページ目を読み取ります。";
+    }
+
+    document.getElementById("generateStatus").textContent =
+      "資料を選択してください。";
+  });
+
+// PDF選択時に生成ボタンを有効にする
 document.getElementById("pdfFile")
   .addEventListener("change", () => {
 
@@ -174,15 +224,27 @@ document.getElementById("pdfFile")
     const generateStatus =
       document.getElementById("generateStatus");
 
-    if (file && file.type === "application/pdf") {
-      generateBtn.disabled = false;
-      generateStatus.textContent =
-        "PDFを選択しました。イラストを生成できます。";
-    } else {
-      generateBtn.disabled = true;
-      generateStatus.textContent =
-        "PDFファイルを選択してください。";
-    }
+   const fileType =
+  document.getElementById("fileType").value;
+
+const validFile =
+  file &&
+  (
+    (fileType === "pdf" &&
+      file.type === "application/pdf") ||
+    (fileType === "photo" &&
+      ["image/jpeg", "image/png"].includes(file.type))
+  );
+
+if (validFile) {
+  generateBtn.disabled = false;
+  generateStatus.textContent =
+    "資料を選択しました。イラストを生成できます。";
+} else {
+  generateBtn.disabled = true;
+  generateStatus.textContent =
+    "選択した形式に対応するファイルを選んでください。";
+}
   });
   // PDFの1ページ目をJPEG画像に変換する
 async function convertPdfToImage(file) {
@@ -233,24 +295,47 @@ document.getElementById("generateBtn")
     const code = document.getElementById("authCode").value.trim();
     const style = document.getElementById("style").value;
 
-    if (!file) {
-      status.textContent = "PDFを選択してください。";
-      return;
-    }
+if (!file) {
+  status.textContent = "資料を選択してください。";
+  return;
+}
 
-    button.disabled = true;
-    status.textContent = "PDFを読み取っています…";
-    result.textContent = "イラストを作成しています。";
+button.disabled = true;
+
+const selectedType =
+  document.getElementById("fileType").value;
+
+status.textContent =
+  selectedType === "pdf"
+    ? "PDFを読み取っています…"
+    : "写真を読み取っています…";
+
+result.textContent = "イラストを作成しています。";
 
     try {
-      // PDFの1ページ目をJPEG画像に変換
-      const image = await convertPdfToImage(file);
+      // PDFの場合は1ページ目を画像に変換する
+// 写真の場合はそのまま送信する
+const fileType =
+  document.getElementById("fileType").value;
+
+let image;
+
+if (fileType === "pdf") {
+  image = await convertPdfToImage(file);
+} else {
+  image = file;
+}
 
       const formData = new FormData();
       formData.append("code", code);
       formData.append("studentId", studentId);
       formData.append("style", style);
-      formData.append("image", image, "research.jpg");
+      const imageName =
+  image.type === "image/png"
+    ? "research.png"
+    : "research.jpg";
+
+formData.append("image", image, imageName);
 
       status.textContent = "AIがイラストを生成しています…";
 
@@ -286,6 +371,5 @@ document.getElementById("generateBtn")
     }
   });
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </body>
 </html>
