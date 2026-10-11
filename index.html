@@ -109,9 +109,21 @@ button:disabled { background: #a4b0bc; cursor: not-allowed; }
       <option value="simple">シンプルなイラスト風</option>
     </select>
   </section>
-
   <section>
-  <h2>④ イラスト作成</h2>
+    <h2>④ 画像生成の条件</h2>
+
+    <label for="environment">環境条件を選択</label>
+    <select id="environment">
+      <option value="none">追加条件なし（基本設定）</option>
+      <option value="space">宇宙の条件を追加する</option>
+    </select>
+
+    <p class="note">
+      宇宙を選ぶと、資料の内容に宇宙環境の条件を追加します。
+    </p>
+  </section>
+  <section>
+  <h2>⑤ イラスト作成</h2>
   <button id="generateBtn" type="button" disabled>
     イラストを生成する
   </button>
@@ -121,7 +133,7 @@ button:disabled { background: #a4b0bc; cursor: not-allowed; }
 </section>
 
   <section>
-    <h2>⑤ 生成結果</h2>
+    <h2>⑥ 生成結果</h2>
     <div id="result">ここに画像が表示されます。</div>
   </section>
 </div>
@@ -294,6 +306,7 @@ document.getElementById("generateBtn")
     const studentId = document.getElementById("studentId").value.trim();
     const code = document.getElementById("authCode").value.trim();
     const style = document.getElementById("style").value;
+    const environment = document.getElementById("environment").value;
 
 if (!file) {
   status.textContent = "資料を選択してください。";
@@ -330,6 +343,7 @@ if (fileType === "pdf") {
       formData.append("code", code);
       formData.append("studentId", studentId);
       formData.append("style", style);
+      formData.append("environment", environment);
       const imageName =
   image.type === "image/png"
     ? "research.png"
