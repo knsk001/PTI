@@ -100,10 +100,14 @@ button:disabled { background: #a4b0bc; cursor: not-allowed; }
   </section>
 
   <section>
-    <h2>④ イラスト作成</h2>
-    <button disabled>画像生成（準備中）</button>
-    <p class="note">PDFの読み取り機能は今後追加します。</p>
-  </section>
+  <h2>④ イラスト作成</h2>
+  <button id="generateBtn" type="button" disabled>
+    イラストを生成する
+  </button>
+  <p id="generateStatus" class="note">
+    PDFを選択すると生成できます。
+  </p>
+</section>
 
   <section>
     <h2>⑤ 生成結果</h2>
@@ -157,6 +161,32 @@ document.getElementById("authBtn").addEventListener("click", async () => {
     button.disabled = false;
   }
 });
+  // PDF選択時に生成ボタンを有効にする
+document.getElementById("pdfFile")
+  .addEventListener("change", () => {
+
+    const file =
+      document.getElementById("pdfFile").files[0];
+
+    const generateBtn =
+      document.getElementById("generateBtn");
+
+    const generateStatus =
+      document.getElementById("generateStatus");
+
+    if (file && file.type === "application/pdf") {
+      generateBtn.disabled = false;
+      generateStatus.textContent =
+        "PDFを選択しました。イラストを生成できます。";
+    } else {
+      generateBtn.disabled = true;
+      generateStatus.textContent =
+        "PDFファイルを選択してください。";
+    }
+  });
 </script>
+  </script>
+</body>
+</html>
 </body>
 </html>
