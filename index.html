@@ -184,9 +184,108 @@ document.getElementById("pdfFile")
         "PDFファイルを選択してください。";
     }
   });
+  // PDFの1ページ目をJPEG画像に変換する
+async function convertPdfToImage(file) {
+
+  const arrayBuffer = await file.arrayBuffer();
+
+  const pdf = await pdfjsLib.getDocument({
+    data: arrayBuffer
+  }).promise;
+
+  const page = await pdf.getPage(1);
+
+  const viewport = page.getViewport({
+    scale: 1.5
+  });
+
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+
+  await page.render({
+    canvasContext: context,
+    viewport: viewport
+  }).promise;
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error("PDFの画像変換に失敗しました。"));
+      }
+    }, "image/jpeg", 0.85);
+  });
+}
+// 画像生成ボタンを押したときの処理
+document.getElementById("generateBtn")
+  .addEventListener("click", async () => {
+
+    const button = document.getElementById("generateBtn");
+    const status = document.getElementById("generateStatus");
+    const result = document.getElementById("result");
+
+    const file = document.getElementById("pdfFile").files[0];
+    const studentId = document.getElementById("studentId").value.trim();
+    const code = document.getElementById("authCode").value.trim();
+    const style = document.getElementById("style").value;
+
+    if (!file) {
+      status.textContent = "PDFを選択してください。";
+      return;
+    }
+
+    button.disabled = true;
+    status.textContent = "PDFを読み取っています…";
+    result.textContent = "イラストを作成しています。";
+
+    try {
+      // PDFの1ページ目をJPEG画像に変換
+      const image = await convertPdfToImage(file);
+
+      const formData = new FormData();
+      formData.append("code", code);
+      formData.append("studentId", studentId);
+      formData.append("style", style);
+      formData.append("image", image, "research.jpg");
+
+      status.textContent = "AIがイラストを生成しています…";
+
+      const response = await fetch(API + "/generate", {
+        method: "POST",
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "画像生成に失敗しました。");
+      }
+
+      const blob = await response.blob();
+      const imageUrl = URL.createObjectURL(blob);
+
+      result.replaceChildren();
+
+      const img = document.createElement("img");
+      img.src = imageUrl;
+      img.alt = "生成された探究イラスト";
+      img.style.maxWidth = "100%";
+
+      result.appendChild(img);
+
+      status.textContent = "イラストが完成しました。";
+
+    } catch (error) {
+      status.textContent = error.message;
+      result.textContent = "画像を生成できませんでした。";
+    } finally {
+      button.disabled = false;
+    }
+  });
 </script>
-  </script>
-</body>
-</html>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </body>
 </html>
